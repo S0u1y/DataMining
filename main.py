@@ -1,10 +1,10 @@
 import collections
 
 
-MIN_SUPPORT = 0.004
+MIN_SUPPORT = 0.2
 MIN_CONFIDENCE = 0.5
 
-dataset = "Datasets/" + "T10I4D100K.dat"
+dataset = "Datasets/" + "itemsets_test.dat"
 # Vozik - 0.004 = 630 first pass, 760 second, 552 third, 233, 59, 3
 # Vozik - 0.009 = 404 first pass, 15 second, 2 third
 
@@ -24,15 +24,15 @@ def write_data(data):
         output.write(data.__str__() + "\n")
 
 
-def add_confidence(item_set, confidences_list):
-    if item_set in confidences_list:
-        confidences_list[item_set] += 1
+def add_support(item_set, supports_list):
+    if item_set in supports_list:
+        supports_list[item_set] += 1
     else:
-        confidences_list[item_set] = 1
+        supports_list[item_set] = 1
 
 
 def Apriori():
-    confidences = {}
+    supports = {}
 
     transactions = parse_file(dataset)
     transactions = [set(t) for t in transactions]
@@ -43,24 +43,24 @@ def Apriori():
         transaction = transactions[i]
         print(transaction)
         for item in transaction:
-            add_confidence(item, confidences)
+            add_support(item, supports)
 
-    for key, value in confidences.items():
-        confidences[key] = value / transactions_length
+    for key, value in supports.items():
+        supports[key] = value / transactions_length
 
-    confidences = collections.OrderedDict(sorted(confidences.items()))
+    supports = collections.OrderedDict(sorted(supports.items()))
 
-    confidences = {
+    supports = {
         key: value for key, value
-        in confidences.items()
+        in supports.items()
         if value >= MIN_SUPPORT
     }
 
-    write_data(confidences)
+    write_data(supports)
 
     k = 0
 
-    frequent = [confidences.copy()]
+    frequent = [supports.copy()]
 
     while not len(frequent[k]) == 0:
         items = list(frequent[k].keys())
@@ -76,23 +76,23 @@ def Apriori():
                 else:
                     item_sets.add((items[i], items[i + j]))
 
-        new_confidences = {}
+        new_supports = {}
         for its_i, item_set in enumerate(item_sets):
             print(f"Evaluating Itemsets {its_i * 100 / len(item_sets)}")
             for t_i, transaction in enumerate(transactions):
                 if set(item_set).issubset(transaction):
-                    add_confidence(item_set, new_confidences)
+                    add_support(item_set, new_supports)
 
-        for key, value in new_confidences.items():
-            new_confidences[key] = value / transactions_length
+        for key, value in new_supports.items():
+            new_supports[key] = value / transactions_length
 
-        new_confidences = {
+        new_supports = {
             key: value for key, value
-            in new_confidences.items()
+            in new_supports.items()
             if value >= MIN_SUPPORT
         }
 
-        frequent.append(new_confidences)
+        frequent.append(new_supports)
 
         k += 1
 
@@ -118,14 +118,13 @@ def transposed_matrix():
     adjacency_matrix = {key: set(value) for key, value in adjacency_matrix.items() if
                         (value and len(value) / transactions_length >= MIN_SUPPORT)}
 
-    frequent = [adjacency_matrix.keys()]
+    frequent = [{key: len(value)/transactions_length for key, value in adjacency_matrix.items()}]
     k = 0
+    write_data(frequent[k])
+    confidences = {}
     while not len(frequent[k]) == 0:
-
-        write_data(frequent[k])
-
         items = list(frequent[k])
-        new_confidence = {}
+        new_supports = {}
         items_length = len(items)
         for i in range(items_length - 1):
             print(f"Evaluating item #{i + 1}/{items_length}")
@@ -137,7 +136,7 @@ def transposed_matrix():
                 else:
                     item_set = (items[i], items[i + j])
 
-                if item_set in new_confidence:
+                if item_set in new_supports:
                     continue
 
                 appearance_set = set()
@@ -146,12 +145,28 @@ def transposed_matrix():
                     appearance_set.intersection_update(adjacency_matrix[item_set[item_i]])
 
                 if len(appearance_set) / transactions_length >= MIN_SUPPORT:
-                    new_confidence[item_set] = len(appearance_set) / transactions_length
+                    new_supports[item_set] = len(appearance_set) / transactions_length
 
-        frequent.append(new_confidence)
+        frequent.append(new_supports)
+
+        for key_b, value_a_u_b in frequent[k+1].items():
+            for key_a, value_a in frequent[k].items():
+                if set(key_a).issubset(key_b):
+                    a = key_a
+                    a_u_b = set(key_b).difference(a)
+
+                    if value_a == 0 or (value_a_u_b / value_a) < MIN_CONFIDENCE:
+                        continue
+
+                    if not a.__str__() in confidences:
+                        confidences[a.__str__()] = {}
+                    confidences[a.__str__()][a_u_b.__str__()] = value_a_u_b / value_a
 
         k += 1
+        write_data(frequent[k])
 
+    write_data("")
+    write_data(confidences)
 
 if __name__ == '__main__':
 

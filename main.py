@@ -31,7 +31,7 @@ def add_support(item_set, supports_list):
         supports_list[item_set] = 1
 
 
-def BasicApriori():
+def basic_apriori():
     supports = {}
 
     transactions = parse_file(dataset)
@@ -63,7 +63,7 @@ def BasicApriori():
     frequent = [supports.copy()]
     confidences = {}
 
-    while not len(frequent[k]) == 0:
+    while True:
         items = list(frequent[k].keys())
         items_length = len(frequent[k])
         item_sets = set([])
@@ -109,6 +109,8 @@ def BasicApriori():
                     confidences[a.__str__()][a_u_b.__str__()] = value_a_u_b / value_a
 
         k += 1
+        if not frequent[k]: break
+
         write_data(frequent[k])
 
 
@@ -137,7 +139,7 @@ def transposed_matrix():
     k = 0
     write_data(frequent[k])
     confidences = {}
-    while not len(frequent[k]) == 0:
+    while True:
         items = list(frequent[k])
         new_supports = {}
         items_length = len(items)
@@ -178,6 +180,8 @@ def transposed_matrix():
                     confidences[a.__str__()][a_u_b.__str__()] = value_a_u_b / value_a
 
         k += 1
+        if not frequent[k]: break
+
         write_data(frequent[k])
 
     write_data("")
@@ -188,6 +192,6 @@ if __name__ == '__main__':
     with open("output.txt", "w"):
         pass
 
-    BasicApriori()
+    transposed_matrix()
 
 

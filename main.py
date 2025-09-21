@@ -1,7 +1,7 @@
 import collections
 
 
-MIN_SUPPORT = 0.2
+MIN_SUPPORT = 0.25
 MIN_CONFIDENCE = 0.5
 
 dataset = "Datasets/" + "itemsets_test.dat"
@@ -31,7 +31,7 @@ def add_support(item_set, supports_list):
         supports_list[item_set] = 1
 
 
-def Apriori():
+def BasicApriori():
     supports = {}
 
     transactions = parse_file(dataset)
@@ -61,6 +61,7 @@ def Apriori():
     k = 0
 
     frequent = [supports.copy()]
+    confidences = {}
 
     while not len(frequent[k]) == 0:
         items = list(frequent[k].keys())
@@ -94,12 +95,26 @@ def Apriori():
 
         frequent.append(new_supports)
 
-        k += 1
+        for key_b, value_a_u_b in frequent[k+1].items():
+            for key_a, value_a in frequent[k].items():
+                if set(key_a).issubset(key_b):
+                    a = key_a
+                    a_u_b = set(key_b).difference(a)
 
-    print()
+                    if value_a == 0 or (value_a_u_b / value_a) < MIN_CONFIDENCE:
+                        continue
+
+                    if not a.__str__() in confidences:
+                        confidences[a.__str__()] = {}
+                    confidences[a.__str__()][a_u_b.__str__()] = value_a_u_b / value_a
+
+        k += 1
+        write_data(frequent[k])
+
+
     frequent[0] = dict(frequent[0])
-    for freq in frequent:
-        print(freq)
+    write_data("")
+    write_data(confidences)
 
 
 def transposed_matrix():
@@ -173,6 +188,6 @@ if __name__ == '__main__':
     with open("output.txt", "w"):
         pass
 
-    transposed_matrix()
+    BasicApriori()
 
 
